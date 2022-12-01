@@ -5,5 +5,6 @@
 
 pub mod getresource;
 pub mod keyprovider;
+pub mod getevidence;
 
 pub const AGENT_NAME: &str = "attestation-agent";

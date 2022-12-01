@@ -10,7 +10,9 @@ extern crate strum;
 use crate::kbc_modules::{KbcCheckInfo, KbcInstance, KbcModuleList};
 use anyhow::*;
 use async_trait::async_trait;
-use std::collections::HashMap;
+use std::{collections::HashMap};
+use openssl::hash::{Hasher, MessageDigest};
+use librats_rs::get_quote;
 
 pub mod common;
 mod kbc_modules;
@@ -63,6 +65,12 @@ pub trait AttestationAPIs {
         kbc_name: String,
         kbs_uri: String,
         resource_description: String,
+    ) -> Result<Vec<u8>>;
+
+    async fn get_container_evidence(
+        &mut self,
+        container_id: String,
+        nonce: Vec<u8>
     ) -> Result<Vec<u8>>;
 }
 
@@ -143,5 +151,22 @@ impl AttestationAPIs for AttestationAgent {
             .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?;
         let resource = kbc_instance.get_resource(resource_description).await?;
         Ok(resource)
+    }
+
+    async fn get_container_evidence(
+        &mut self,
+        container_id:String,
+        nonce: Vec<u8>
+    )  -> Result<Vec<u8>> {
+        // TODO: get image_meta data from agent
+        const META_DATA: &[u8] = "12345678".as_bytes();
+
+        let mut h = Hasher::new(MessageDigest::sha256()).unwrap();
+        h.update(META_DATA).unwrap();
+        h.update(&nonce).unwrap();
+
+        let report_data = h.finish().unwrap();
+        let evidence = get_quote(&report_data).await?;
+        Ok(evidence)
     }
 }

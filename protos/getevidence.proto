@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package getevidence;
+
+message GetEvidenceRequest {
+    bytes Nonce = 1;
+    string ContainerId = 2;
+}
+
+message GetEvidenceResponse {
+    bytes Evidence = 1;
+}
+
+service GetEvidenceService {
+    rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
+}

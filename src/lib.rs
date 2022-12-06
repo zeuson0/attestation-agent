@@ -10,9 +10,9 @@ extern crate strum;
 use crate::kbc_modules::{KbcCheckInfo, KbcInstance, KbcModuleList};
 use anyhow::*;
 use async_trait::async_trait;
-use std::{collections::HashMap};
-use openssl::hash::{Hasher, MessageDigest};
 use librats_rs::get_quote;
+use openssl::hash::{Hasher, MessageDigest};
+use std::collections::HashMap;
 
 pub mod common;
 mod kbc_modules;
@@ -69,8 +69,8 @@ pub trait AttestationAPIs {
 
     async fn get_container_evidence(
         &mut self,
-        container_id: String,
-        nonce: Vec<u8>
+        image_digest: &str,
+        nonce: Vec<u8>,
     ) -> Result<Vec<u8>>;
 }
 
@@ -155,14 +155,12 @@ impl AttestationAPIs for AttestationAgent {
 
     async fn get_container_evidence(
         &mut self,
-        container_id:String,
-        nonce: Vec<u8>
-    )  -> Result<Vec<u8>> {
-        // TODO: get image_meta data from agent
-        const META_DATA: &[u8] = "12345678".as_bytes();
-
+        image_digest: &str,
+        nonce: Vec<u8>,
+    ) -> Result<Vec<u8>> {
+        let meta_data = image_digest.as_bytes();
         let mut h = Hasher::new(MessageDigest::sha256()).unwrap();
-        h.update(META_DATA).unwrap();
+        h.update(meta_data).unwrap();
         h.update(&nonce).unwrap();
 
         let report_data = h.finish().unwrap();

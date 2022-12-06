@@ -19,6 +19,7 @@ mod grpc;
 const DEFAULT_KEYPROVIDER_ADDR: &str = "127.0.0.1:50000";
 const DEFAULT_GETRESOURCE_ADDR: &str = "127.0.0.1:50001";
 const DEFAULT_GETEVIDENCE_ADDR: &str = "127.0.0.1:50002";
+const DEFAULT_AGENT_ADDR: &str = "";
 
 lazy_static! {
     pub static ref ATTESTATION_AGENT: Arc<Mutex<AttestationAgent>> =
@@ -50,6 +51,12 @@ async fn main() -> Result<()> {
                 .takes_value(true)
                 .help("This socket address which the GetEvidence gRPC service will listen to, for example: --getevidence_sock 127.0.0.1:11223"
                 )
+        ).arg(
+            Arg::with_name("Agent ttRPC addr")
+                .long("agent_address")
+                .takes_value(true)
+                .help("This socket address which the Agent ttRPC service binded to, for example: --agent_address 127.0.0.1:11223"
+                )
         )
         .get_matches();
 
@@ -68,6 +75,10 @@ async fn main() -> Result<()> {
         .unwrap_or(DEFAULT_GETEVIDENCE_ADDR)
         .parse::<SocketAddr>()?;
 
+    let agent_addr = app_matches
+        .value_of("Agent ttRPC addr")
+        .unwrap_or(DEFAULT_AGENT_ADDR);
+
     debug!(
         "KeyProvider gRPC service listening on: {:?}",
         keyprovider_socket
@@ -81,9 +92,14 @@ async fn main() -> Result<()> {
         getevidence_socket
     );
 
+    debug!("Agent service listening on: {:?}", agent_addr);
+
     let keyprovider_server = grpc::keyprovider::start_service(keyprovider_socket);
     let getresource_server = grpc::getresource::start_service(getresource_socket);
-    let getevidence_server = grpc::getevidence::start_service(getevidence_socket);
-
-    tokio::join!(keyprovider_server, getresource_server, getevidence_server).0
+    if agent_addr.len() < 1 {
+        tokio::join!(keyprovider_server, getresource_server).0
+    } else {
+        let getevidence_server = grpc::getevidence::start_service(getevidence_socket, agent_addr);
+        tokio::join!(keyprovider_server, getresource_server, getevidence_server).0
+    }
 }
